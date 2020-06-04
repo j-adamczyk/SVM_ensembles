@@ -14,6 +14,10 @@ dataset.drop(columns="id", inplace=True)
 # age is in days, convert it to years (with true integer division)
 dataset.loc[:, "age"] //= 365
 
+# map gender from integer (1/2) to boolean to negate magnitude difference
+gender_to_boolean = lambda gender: False if gender == 1 else True
+dataset.loc[:, "gender"] = dataset.loc[:, "gender"].map(gender_to_boolean)
+
 # "smoke", "alco", "active" features and "cardio" class should be boolean, not int
 dataset[["smoke", "alco", "active", "cardio"]] = dataset[["smoke", "alco", "active", "cardio"]].astype("bool")
 
