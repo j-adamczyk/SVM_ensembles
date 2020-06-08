@@ -69,5 +69,5 @@ def add_X_noise(X, mu=0, sigma=0.2, bool_change_prob=0.1):
 
 
 def add_y_noise(y, prob=0.1):
-    return y ^ np.random.rand(y.size) < prob
+    return y ^ (np.random.rand(y.size) < prob)
 

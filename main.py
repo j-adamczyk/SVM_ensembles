@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import os
 from sklearn.metrics import accuracy_score, f1_score
+from sklearn.decomposition import PCA
 from sklearn.svm import SVC
 from skopt import BayesSearchCV
 from skopt.space import Categorical, Real
@@ -143,6 +144,184 @@ def training_size_change():
                 plt.clf()
 
 
+def pca_training():
+    classifiers = {"acute_inflammations": (
+        SVC(C=7.4, gamma=0.01, kernel="linear"),
+        SVMEnsemble(C=9, kernel="linear", max_features=0.9, max_samples=0.65)),
+        "breast_cancer_coimbra": (SVC(C=3, gamma=0.2, kernel="rbf"),
+                                  SVMEnsemble(n_estimators=200, C=2,
+                                              kernel="rbf", max_features=0.5,
+                                              max_samples=0.5)),
+        "breast_cancer_wisconsin": (SVC(C=8, gamma=0.01, kernel="rbf"),
+                                    SVMEnsemble(C=9, kernel="rbf",
+                                                max_features=0.8,
+                                                max_samples=0.7))}
+
+    for dataset in ["acute_inflammations", "breast_cancer_coimbra",
+                    "breast_cancer_wisconsin"]:
+        X, y = load_X_y(dataset, split=False)
+        for clf in classifiers[dataset]:
+            clf_str = "SVM" if str(clf) != "SVMEnsemble" else "SVMEnsemble"
+            xs = []
+            ys = []
+            for sub_features_size in range(len(X.columns)):
+                done = False
+                while not done:
+                    try:
+                        pca_size = len(X.columns) - sub_features_size
+                        X_to_test = X.copy()
+                        pca = PCA(n_components=pca_size)
+                        X_to_test = pca.fit_transform(X_to_test)
+                        X_train, X_test, y_train, y_test = train_test_split(
+                            X_to_test, y, train_size=0.8, random_state=0)
+                        clf.fit(X_train, y_train)
+                        xs.append(pca_size)
+                        ys.append(
+                            round(accuracy_score(y_test, clf.predict(X_test)),
+                                  2))
+                        done = True
+                    except ValueError:
+                        # this exception is caused by "Invalid input - all
+                        # samples with positive weights have the
+                        # same label", which in my opinion should be fixed in
+                        # libsvm, not handled by user
+                        continue
+
+                title = clf_str + " " + dataset
+                plt.title(title)
+                plt.scatter(xs, ys)
+                plt.xlabel("Features size after PCA")
+                plt.ylabel("Accuracy")
+                plt.savefig(os.path.join("plots", clf_str + "_" + dataset +
+                                         "_PCA"))
+                plt.clf()
+
+
+def noise_X_training():
+    classifiers = {"acute_inflammations": (
+        SVC(C=7.4, gamma=0.01, kernel="linear"),
+        SVMEnsemble(C=9, kernel="linear", max_features=0.9, max_samples=0.65)),
+        "breast_cancer_coimbra": (SVC(C=3, gamma=0.2, kernel="rbf"),
+                                  SVMEnsemble(n_estimators=200, C=2,
+                                              kernel="rbf", max_features=0.5,
+                                              max_samples=0.5)),
+        "breast_cancer_wisconsin": (SVC(C=8, gamma=0.01, kernel="rbf"),
+                                    SVMEnsemble(C=9, kernel="rbf",
+                                                max_features=0.8,
+                                                max_samples=0.7))}
+
+    for dataset in ["acute_inflammations", "breast_cancer_coimbra",
+                    "breast_cancer_wisconsin"]:
+        X, y = load_X_y(dataset, split=False)
+        for clf in classifiers[dataset]:
+            clf_str = "SVM" if str(clf) != "SVMEnsemble" else "SVMEnsemble"
+            xs = []
+            ys = []
+            for noise in np.linspace(0, 1, 10, endpoint=True):
+                done = False
+                while not done:
+                    try:
+                        X_to_test = X.copy()
+                        X_to_test = add_X_noise(X_to_test, sigma=noise,
+                                                bool_change_prob=noise)
+                        X_train, X_test, y_train, y_test = train_test_split(
+                            X_to_test, y, train_size=0.8, random_state=0)
+                        clf.fit(X_train, y_train)
+                        xs.append(noise)
+                        ys.append(
+                            round(accuracy_score(y_test, clf.predict(X_test)),
+                                  2))
+                        done = True
+                    except ValueError:
+                        # this exception is caused by "Invalid input - all
+                        # samples with positive weights have the
+                        # same label", which in my opinion should be fixed in
+                        # libsvm, not handled by user
+                        continue
+
+                title = clf_str + " " + dataset + " X_noise"
+                plt.title(title)
+                plt.scatter(xs, ys)
+                plt.xlabel("Added noise (gamma and boolean noise in %)")
+                plt.ylabel("Accuracy")
+                plt.savefig(
+                    os.path.join("plots", clf_str + "_" + dataset + "_XNoise"))
+                plt.clf()
+
+
+def noise_y_training():
+    classifiers = {"acute_inflammations": (
+        SVC(C=7.4, gamma=0.01, kernel="linear"),
+        SVMEnsemble(C=9, kernel="linear", max_features=0.9, max_samples=0.65)),
+        "breast_cancer_coimbra": (SVC(C=3, gamma=0.2, kernel="rbf"),
+                                  SVMEnsemble(n_estimators=200, C=2,
+                                              kernel="rbf", max_features=0.5,
+                                              max_samples=0.5)),
+        "breast_cancer_wisconsin": (SVC(C=8, gamma=0.01, kernel="rbf"),
+                                    SVMEnsemble(C=9, kernel="rbf",
+                                                max_features=0.8,
+                                                max_samples=0.7))}
+
+    for dataset in ["acute_inflammations", "breast_cancer_coimbra",
+                    "breast_cancer_wisconsin"]:
+        X, y = load_X_y(dataset, split=False)
+        for clf in classifiers[dataset]:
+            clf_str = "SVM" if str(clf) != "SVMEnsemble" else "SVMEnsemble"
+            xs = []
+            ys = []
+            for noise in np.linspace(0.1, 1, 10, endpoint=True):
+                print(noise)
+                done = False
+                while not done:
+                    try:
+                        y_to_test = y.copy()
+                        y_to_test = add_y_noise(y_to_test, prob=noise)
+                        X_train, X_test, y_train, y_test = train_test_split(
+                            X, y_to_test, train_size=0.8, random_state=0)
+                        clf.fit(X_train, y_train)
+                        xs.append(noise)
+                        ys.append(
+                            round(accuracy_score(y_test, clf.predict(X_test)),
+                                  2))
+                        done = True
+                    except ValueError:
+                        # this exception is caused by "Invalid input - all
+                        # samples with positive weights have the
+                        # same label", which in my opinion should be fixed in
+                        # libsvm, not handled by user
+                        print("OLABOGA")
+                        continue
+
+                title = clf_str + " " + dataset + " y_noise"
+                plt.title(title)
+                plt.scatter(xs, ys)
+                plt.xlabel("Added noise")
+                plt.ylabel("Accuracy")
+                plt.savefig(
+                    os.path.join("plots", clf_str + "_" + dataset + "_yNoise"))
+                plt.clf()
+
+def corr_matrix():
+    for dataset in ["acute_inflammations", "breast_cancer_coimbra",
+                    "breast_cancer_wisconsin"]:
+        X, y = load_X_y(dataset, split=False)
+
+        f = plt.figure(figsize=(19, 15))
+        plt.matshow(X.corr(), fignum=f.number)
+        plt.xticks(range(len(X.columns)), X.columns, fontsize=12, rotation=45)
+        if dataset == "breast_cancer_wisconsin":
+            plt.xticks(range(len(X.columns)), X.columns, fontsize=12,
+                       rotation=75)
+        plt.yticks(range(X.shape[1]), X.columns, fontsize=12)
+        cb = plt.colorbar()
+        cb.ax.tick_params(labelsize=14)
+        plt.savefig(os.path.join("plots", dataset + "corr_matrix"))
+        plt.clf()
+
 if __name__ == "__main__":
     #optimal_classifier()
-    training_size_change()
+    # training_size_change()
+    # pca_training()
+    # noise_X_training()
+    # noise_y_training()
+    corr_matrix()
