@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import os
+
+from pandas import DataFrame
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
@@ -289,7 +291,6 @@ def noise_y_training():
                         # samples with positive weights have the
                         # same label", which in my opinion should be fixed in
                         # libsvm, not handled by user
-                        print("OLABOGA")
                         continue
 
                 title = clf_str + " " + dataset + " y_noise"
@@ -301,22 +302,39 @@ def noise_y_training():
                     os.path.join("plots", clf_str + "_" + dataset + "_yNoise"))
                 plt.clf()
 
+
 def corr_matrix():
     for dataset in ["acute_inflammations", "breast_cancer_coimbra",
                     "breast_cancer_wisconsin"]:
-        X, y = load_X_y(dataset, split=False)
+        X = load_X(dataset)
+        corr = X.corr()
+        corr.style.background_gradient(cmap='coolwarm')
+        corr.to_csv('plots/html/' + dataset + '_correlation_matrix.csv')
+        html = corr.style.background_gradient(cmap='RdBu').set_precision(
+            2).render()
 
-        f = plt.figure(figsize=(19, 15))
-        plt.matshow(X.corr(), fignum=f.number)
-        plt.xticks(range(len(X.columns)), X.columns, fontsize=12, rotation=45)
-        if dataset == "breast_cancer_wisconsin":
-            plt.xticks(range(len(X.columns)), X.columns, fontsize=12,
-                       rotation=75)
-        plt.yticks(range(X.shape[1]), X.columns, fontsize=12)
-        cb = plt.colorbar()
-        cb.ax.tick_params(labelsize=14)
-        plt.savefig(os.path.join("plots", dataset + "corr_matrix"))
-        plt.clf()
+        # Writing the output to a html file.
+        with open('plots/html/' + dataset + '.html', 'w') as f:
+            print(
+                '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta '
+                'name="viewport" content="width=device-widthinitial-scale=1.0'
+                '"><title>Document</title></head><style>table{word-break: '
+                'break-all;}</style><body>' + html + '</body></html>',
+                file=f)
+
+
+def histograms():
+    histogram('urine_pushing', 'inflammation', 'Inflammation',
+              'Non-inflamation', 'acute_inflammations', -2, 2)
+    histogram('micturition_pains', 'inflammation', 'Inflammation',
+              'Non-inflamation', 'acute_inflammations', -2, 2)
+    histogram('Glucose', 'Classification', 'Breast cancer',
+              'Non-breast cancer', 'breast_cancer_coimbra', 30, 250)
+    histogram('worst_concave_points', 'diagnosis', 'Breast cancer',
+              'Non-breast cancer', 'breast_cancer_wisconsin', -0.5, 0.5)
+    histogram('worst_perimeter', 'diagnosis', 'Breast cancer',
+              'Non-breast cancer', 'breast_cancer_wisconsin', 30, 300)
+
 
 if __name__ == "__main__":
     #optimal_classifier()
@@ -325,3 +343,4 @@ if __name__ == "__main__":
     # noise_X_training()
     # noise_y_training()
     corr_matrix()
+    # histograms()
